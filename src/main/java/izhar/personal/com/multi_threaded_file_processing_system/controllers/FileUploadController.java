@@ -1,21 +1,27 @@
 package izhar.personal.com.multi_threaded_file_processing_system.controllers;
 
+import izhar.personal.com.multi_threaded_file_processing_system.concurrency.ThreadedFileProcessor;
+import izhar.personal.com.multi_threaded_file_processing_system.dto.ProcessingResult;
 import izhar.personal.com.multi_threaded_file_processing_system.service.PdfToWordConverter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 @RestController
 @RequestMapping("/users")
 public class FileUploadController {
-
+    @Autowired
+    private ThreadedFileProcessor threadedFileProcessor;
     private final PdfToWordConverter pdfToWordConverter = new PdfToWordConverter();
 
     @PostMapping("/upload/files")
@@ -26,22 +32,31 @@ public class FileUploadController {
             // 1) turn MultipartFile into a File
             File javaFile = toJavaFile(file);
             // 2) convert PDF → Word
-            File wordFile = pdfToWordConverter.convertToWord(javaFile);
+            Future<ProcessingResult> future= threadedFileProcessor.processFileAsync(javaFile);
+//            File wordFile = pdfToWordConverter.convertToWord(javaFile);
+            ProcessingResult result= future.get(30, TimeUnit.SECONDS);
+            System.out.println("the result is "+result);
             // 3) read all bytes of the .docx
-            byte[] data = Files.readAllBytes(wordFile.toPath());
-            ByteArrayResource resource = new ByteArrayResource(data);
+            if(result.isSuccess()){
+                System.out.println("the result is Success");
+                String outputPath= javaFile.getAbsolutePath().replaceAll(".pdf$",".docx");
+                File wordFile = new File(outputPath);
+               byte[] data = Files.readAllBytes(wordFile.toPath());
+                ByteArrayResource byteArrayResource= new ByteArrayResource(data);
+                // 4) stream it back as a download
+                return ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(
+                                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                        .header(HttpHeaders.CONTENT_DISPOSITION,
+                                "attachment; filename=\"" + wordFile.getName() + "\"").header("ThreadName",result.getThreadName())
+                        .contentLength(data.length)
+                        .body(byteArrayResource);
+            } else{
+                System.out.println("the result is Failed");
+                return ResponseEntity.internalServerError().build();
+            }
+        } catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
 
-            // 4) stream it back as a download
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(
-                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + wordFile.getName() + "\"")
-                    .contentLength(data.length)
-                    .body(resource);
-
-        } catch (IOException e) {
-            // you can return a more detailed error if you like
             return ResponseEntity.internalServerError().build();
         }
     }

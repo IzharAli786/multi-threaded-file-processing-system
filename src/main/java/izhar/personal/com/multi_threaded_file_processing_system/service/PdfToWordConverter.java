@@ -12,6 +12,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.AutoCloseable;
+
 public class PdfToWordConverter  {
 
 
@@ -51,7 +52,6 @@ public class PdfToWordConverter  {
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to write DOCX", e);
         }
-
         return docxFile;
     }
 
