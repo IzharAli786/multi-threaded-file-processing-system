@@ -13,10 +13,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
+
 @RestController
 @RequestMapping("/users")
 public class FileUploadController {
@@ -32,7 +30,7 @@ public class FileUploadController {
             // 1) turn MultipartFile into a File
             File javaFile = toJavaFile(file);
             // 2) convert PDF → Word
-            Future<ProcessingResult> future= threadedFileProcessor.processFileAsync(javaFile);
+            CompletableFuture<ProcessingResult> future= threadedFileProcessor.processFileAsync(javaFile);
 //            File wordFile = pdfToWordConverter.convertToWord(javaFile);
             ProcessingResult result= future.get(30, TimeUnit.SECONDS);
             System.out.println("the result is "+result);
