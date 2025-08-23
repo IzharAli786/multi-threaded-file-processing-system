@@ -1,8 +1,11 @@
 package izhar.personal.com.multi_threaded_file_processing_system.controllers;
-
 import izhar.personal.com.multi_threaded_file_processing_system.concurrency.ThreadedFileProcessor;
+import izhar.personal.com.multi_threaded_file_processing_system.config.CustomAsyncExceptionHandler;
 import izhar.personal.com.multi_threaded_file_processing_system.dto.ProcessingResult;
+import izhar.personal.com.multi_threaded_file_processing_system.service.LogService;
 import izhar.personal.com.multi_threaded_file_processing_system.service.PdfToWordConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
@@ -20,7 +23,12 @@ import java.util.concurrent.*;
 public class FileUploadController {
     @Autowired
     private ThreadedFileProcessor threadedFileProcessor;
+    @Autowired
+    private CustomAsyncExceptionHandler customAsyncExceptionHandler;
+    private static  final Logger logger= LoggerFactory.getLogger(FileUploadController.class);
     private final PdfToWordConverter pdfToWordConverter = new PdfToWordConverter();
+    @Autowired
+    private LogService logService;
 
     @PostMapping("/upload/files")
     public ResponseEntity<ByteArrayResource> uploadFiles(
@@ -28,6 +36,11 @@ public class FileUploadController {
     ) {
         try {
             // 1) turn MultipartFile into a File
+            logger.debug("Uploading file {} ...", file.getOriginalFilename());
+            logger.info("uploading files ");
+
+
+            System.out.println("the logger debug is not working i guess");
             File javaFile = toJavaFile(file);
             // 2) convert PDF → Word
             CompletableFuture<ProcessingResult> future= threadedFileProcessor.processFileAsync(javaFile);
@@ -58,6 +71,16 @@ public class FileUploadController {
             return ResponseEntity.internalServerError().build();
         }
     }
+    @GetMapping("/test-logging")
+    public ResponseEntity<String> testLogging() {
+       logService.addLog("ERROR","hello i am in logAddService",this.getClass().toString());
+
+        System.out.println("System.out.println - this should always show in console");
+
+        return ResponseEntity.ok("Check console for log messages");
+    }
+
+
 
     private File toJavaFile(MultipartFile multipart) throws IOException {
         String tmpBase = System.getProperty("java.io.tmpdir");
