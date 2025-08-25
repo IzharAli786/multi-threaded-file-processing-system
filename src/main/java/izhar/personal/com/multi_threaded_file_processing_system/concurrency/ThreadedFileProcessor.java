@@ -13,7 +13,6 @@
     import java.time.LocalDateTime;
     import java.util.concurrent.CompletableFuture;
     import java.util.concurrent.Executor;
-
     @Slf4j
     @Service
     public class ThreadedFileProcessor {
@@ -32,12 +31,14 @@
                     .thenApply(this::returnResponse)
                     .exceptionally(this::handleProcessingError);
         }
+
         private ProcessingResult returnResponse(File convertedFile) {
-            System.out.println("Came here ");
+            System.out.println("Came here in returnResponse");
             String threadName = Thread.currentThread().getName();
             LocalDateTime startTime = ProcessingContext.getStartTime();
-            System.out.println(startTime);
+            System.out.println("startTime is " + startTime);
             long processingTime = System.currentTimeMillis() - java.sql.Timestamp.valueOf(startTime).getTime();
+            System.out.println("the processing time is "+processingTime);
             return new ProcessingResult(convertedFile.getName(), processingTime, threadName, convertedFile.length());
         }
 

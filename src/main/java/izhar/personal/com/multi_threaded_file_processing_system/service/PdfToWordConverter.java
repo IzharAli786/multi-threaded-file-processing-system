@@ -6,21 +6,16 @@ import com.itextpdf.text.pdf.parser.PdfTextExtractor;
 import com.itextpdf.text.pdf.parser.SimpleTextExtractionStrategy;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.AutoCloseable;
-
 public class PdfToWordConverter  {
-
-
     public File convertToWord(File pdfFile) throws IOException {
         String pdfPath = pdfFile.getAbsolutePath();
         File docxFile = new File(pdfPath.replaceAll("\\.pdf$", ".docx"));
         StringBuilder allText = new StringBuilder();
-
         PdfReader reader = new PdfReader(pdfPath);
         try  {
             int pages = reader.getNumberOfPages();
@@ -38,7 +33,6 @@ public class PdfToWordConverter  {
 
             reader.close();
         }
-
         // 2) Write to a fresh .docx
         try (XWPFDocument document = new XWPFDocument();
              FileOutputStream out = new FileOutputStream(docxFile)) {
