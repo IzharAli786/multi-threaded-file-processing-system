@@ -1,5 +1,5 @@
 package izhar.personal.com.multi_threaded_file_processing_system.controllers;
-import izhar.personal.com.multi_threaded_file_processing_system.concurrency.ThreadedFileProcessor;
+//import izhar.personal.com.multi_threaded_file_processing_system.concurrency.ThreadedFileProcessor;
 import izhar.personal.com.multi_threaded_file_processing_system.config.CustomAsyncExceptionHandler;
 import izhar.personal.com.multi_threaded_file_processing_system.dto.ProcessingResult;
 import izhar.personal.com.multi_threaded_file_processing_system.exception.GlobalExceptionHandler;
@@ -31,8 +31,7 @@ import izhar.personal.com.multi_threaded_file_processing_system.service.Resilien
 public class FileUploadController {
     private static final Logger logger = LoggerFactory.getLogger(FileUploadController.class);
     private final PdfToWordConverter pdfToWordConverter = new PdfToWordConverter();
-    @Autowired
-    private ThreadedFileProcessor threadedFileProcessor;
+
     @Autowired
     private CustomAsyncExceptionHandler customAsyncExceptionHandler;
     @Autowired
