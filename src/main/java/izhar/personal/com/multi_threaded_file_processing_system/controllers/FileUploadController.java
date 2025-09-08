@@ -1,5 +1,4 @@
 package izhar.personal.com.multi_threaded_file_processing_system.controllers;
-
 import izhar.personal.com.multi_threaded_file_processing_system.concurrency.ThreadedFileProcessor;
 import izhar.personal.com.multi_threaded_file_processing_system.config.CustomAsyncExceptionHandler;
 import izhar.personal.com.multi_threaded_file_processing_system.dto.ProcessingResult;
@@ -26,7 +25,7 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-
+import izhar.personal.com.multi_threaded_file_processing_system.service.ResilientFileProcessingService;
 @RestController
 @RequestMapping("/users")
 public class FileUploadController {
@@ -41,6 +40,9 @@ public class FileUploadController {
     @Autowired
     private LogService logService;
 
+    @Autowired
+    private ResilientFileProcessingService resilientFileProcessingService;
+
     @PostMapping("/upload/files" )
     public ResponseEntity<ByteArrayResource> uploadFiles(@RequestParam("file") MultipartFile[] file) {
         try {
@@ -48,7 +50,7 @@ public class FileUploadController {
             for (MultipartFile fileItem : file) {
                 File javaFile = toJavaFile(fileItem);
                 // 2) convert PDF → Word
-                CompletableFuture<ProcessingResult> future = threadedFileProcessor.processFileAsync(javaFile);
+                CompletableFuture<ProcessingResult> future = resilientFileProcessingService.processFileResilient(javaFile);
                 ProcessingResult result = future.get(30, TimeUnit.SECONDS);
 
                 // 3) read all bytes of the .docx

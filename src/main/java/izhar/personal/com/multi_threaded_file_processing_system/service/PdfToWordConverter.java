@@ -6,11 +6,14 @@ import com.itextpdf.text.pdf.parser.PdfTextExtractor;
 import com.itextpdf.text.pdf.parser.SimpleTextExtractionStrategy;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.springframework.context.annotation.Bean;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.AutoCloseable;
+
 public class PdfToWordConverter  {
     public File convertToWord(File pdfFile) throws IOException {
         String pdfPath = pdfFile.getAbsolutePath();
