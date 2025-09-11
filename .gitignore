@@ -1,0 +1,30 @@
+# Java
+/target/
+/*.iml
+*.class
+*.log
+*.jar
+*.war
+*.ear
+*.db
+
+# Maven
+.mvn/
+.settings/
+.idea/
+*.swp
+
+# Node.js / Vite / Frontend
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.vite/
+
+# OS/Editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.bak
+*.tmp
+
+# Environment
+.env
