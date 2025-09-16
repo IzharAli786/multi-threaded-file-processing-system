@@ -20,20 +20,20 @@ import java.util.Map;
 @Configuration
 @EnableRetry
 public class RetryConfig {
-    @Bean
-    public RetryTemplate retryTemplate() {
-        RetryTemplate retryTemplate = new RetryTemplate();
-        Map<Class<? extends Throwable>, Boolean> retryableExceptions = new HashMap<>();
-        retryableExceptions.put(IOException.class, true);
-        retryableExceptions.put(SQLException.class, true);
-        SimpleRetryPolicy simpleRetryPolicy = new SimpleRetryPolicy(3,retryableExceptions);
-        retryTemplate.setRetryPolicy(simpleRetryPolicy);
-        ExponentialBackOffPolicy exponentialBackOff = new ExponentialBackOffPolicy();
-        exponentialBackOff.setInitialInterval(500);
-        exponentialBackOff.setMaxInterval(500);
-        exponentialBackOff.setMultiplier(2);
-        retryTemplate.setBackOffPolicy( exponentialBackOff);
-        retryTemplate.setThrowLastExceptionOnExhausted(true);
-        return retryTemplate;
-    }
+  @Bean
+  public RetryTemplate retryTemplate() {
+    RetryTemplate retryTemplate = new RetryTemplate();
+    Map<Class<? extends Throwable>, Boolean> retryableExceptions = new HashMap<>();
+    retryableExceptions.put(IOException.class, true);
+    retryableExceptions.put(SQLException.class, true);
+    SimpleRetryPolicy simpleRetryPolicy = new SimpleRetryPolicy(3, retryableExceptions);
+    retryTemplate.setRetryPolicy(simpleRetryPolicy);
+    ExponentialBackOffPolicy exponentialBackOff = new ExponentialBackOffPolicy();
+    exponentialBackOff.setInitialInterval(500);
+    exponentialBackOff.setMaxInterval(500);
+    exponentialBackOff.setMultiplier(2);
+    retryTemplate.setBackOffPolicy(exponentialBackOff);
+    retryTemplate.setThrowLastExceptionOnExhausted(true);
+    return retryTemplate;
+  }
 }
