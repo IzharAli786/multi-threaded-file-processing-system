@@ -33,7 +33,7 @@ function App() {
             const formdata = new FormData();
             formdata.append("file", file);
 
-            const response = await axios.post('/users/upload/files', formdata, {
+            const response = await axios.post('/customer/upload/files', formdata, {
                 headers: {'Content-Type': 'multipart/form-data'},
                 responseType: "blob"
             });
@@ -207,7 +207,7 @@ function App() {
                     )}
                 </div>
             </div>
-            <WebSocket></WebSocket>
+            {/*<WebSocket></WebSocket>*/}
         </>
 
     )
