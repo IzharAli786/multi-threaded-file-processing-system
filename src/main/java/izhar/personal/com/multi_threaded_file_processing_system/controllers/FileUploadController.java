@@ -3,7 +3,10 @@ package izhar.personal.com.multi_threaded_file_processing_system.controllers;
 
 import izhar.personal.com.multi_threaded_file_processing_system.config.CustomAsyncExceptionHandler;
 import izhar.personal.com.multi_threaded_file_processing_system.dto.ProcessingResult;
+import izhar.personal.com.multi_threaded_file_processing_system.entity.Job;
+import izhar.personal.com.multi_threaded_file_processing_system.enums.Status;
 import izhar.personal.com.multi_threaded_file_processing_system.exception.GlobalExceptionHandler;
+import izhar.personal.com.multi_threaded_file_processing_system.service.JobService;
 import izhar.personal.com.multi_threaded_file_processing_system.service.LogService;
 import izhar.personal.com.multi_threaded_file_processing_system.service.PdfToWordConverter;
 import org.slf4j.Logger;
@@ -41,6 +44,8 @@ public class FileUploadController {
   private GlobalExceptionHandler exceptionHandler;
   @Autowired
   private LogService logService;
+  @Autowired
+  private JobService jobService;
 
   @Autowired
   private ResilientFileProcessingService resilientFileProcessingService;
@@ -50,17 +55,22 @@ public class FileUploadController {
   public ResponseEntity<ByteArrayResource> uploadFiles(@RequestParam("file") MultipartFile[] file) {
     try {
       logService.addLog("strong", "i am in upload/files", "FileUploadController");
-
+      Job job = jobService.createJob("myJob1", Status.QUEUED);
+      logger.info("the job is {}", job);
       List<File> convertedFiles = new ArrayList<>();
       for (MultipartFile fileItem : file) {
         File javaFile = toJavaFile(fileItem);
-        // 2) convert PDF → Word
-        CompletableFuture<ProcessingResult> future = resilientFileProcessingService.processFileResilient(javaFile);
+
+        CompletableFuture<ProcessingResult> future = resilientFileProcessingService.processFileResilient(javaFile, job);
         ProcessingResult result = future.get(30, TimeUnit.SECONDS);
 
         // 3) read all bytes of the .docx
         if (result.isSuccess()) {
           System.out.println("the result is Success");
+          job.setStatus(Status.COMPLETED);
+
+          logger.info("the job is {}", job);
+
           String outputPath = javaFile.getAbsolutePath().replaceAll(".pdf$", ".docx");
           File wordFile = new File(outputPath);
           convertedFiles.add(wordFile);
