@@ -19,7 +19,7 @@ public class SecurityConfig {
     http
           .authorizeHttpRequests(authorize -> authorize
                 // 1. Add this rule to permit all access to the SockJS info endpoint
-                .requestMatchers("/customers/info").permitAll()
+                .requestMatchers("/customers/**").permitAll()
                 // 2. Keep this rule to secure all other endpoints
                 .anyRequest().authenticated()
           )
