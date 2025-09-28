@@ -4,22 +4,24 @@ package izhar.personal.com.multi_threaded_file_processing_system.controllers;
 import izhar.personal.com.multi_threaded_file_processing_system.config.CustomAsyncExceptionHandler;
 import izhar.personal.com.multi_threaded_file_processing_system.dto.ProcessingResult;
 import izhar.personal.com.multi_threaded_file_processing_system.entity.Job;
+import izhar.personal.com.multi_threaded_file_processing_system.entity.ProcessingLogs;
 import izhar.personal.com.multi_threaded_file_processing_system.enums.Status;
 import izhar.personal.com.multi_threaded_file_processing_system.exception.GlobalExceptionHandler;
-import izhar.personal.com.multi_threaded_file_processing_system.service.JobService;
-import izhar.personal.com.multi_threaded_file_processing_system.service.LogService;
-import izhar.personal.com.multi_threaded_file_processing_system.service.PdfToWordConverter;
+import izhar.personal.com.multi_threaded_file_processing_system.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
 import java.util.zip.GZIPInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -29,8 +31,6 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-
-import izhar.personal.com.multi_threaded_file_processing_system.service.ResilientFileProcessingService;
 
 @RestController
 @RequestMapping("/customer")
@@ -49,36 +49,51 @@ public class FileUploadController {
 
   @Autowired
   private ResilientFileProcessingService resilientFileProcessingService;
+  private ProcessingLogService processingLogService;
 
 
   @PostMapping("/upload/files")
-  public ResponseEntity<ByteArrayResource> uploadFiles(@RequestParam("file") MultipartFile[] file) {
+  public ResponseEntity<ByteArrayResource> uploadFiles(@RequestParam("file") MultipartFile[] file) throws Error {
     try {
+
+
       logService.addLog("strong", "i am in upload/files", "FileUploadController");
       Job job = jobService.createJob("myJob1", Status.QUEUED);
+
       logger.info("the job is {}", job);
       List<File> convertedFiles = new ArrayList<>();
       for (MultipartFile fileItem : file) {
+        if (fileItem.isEmpty()) {
+          return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ByteArrayResource("".getBytes()));
+
+        }
+        ProcessingLogs processingLogs = new ProcessingLogs(fileItem.getName());
+        processingLogs.setFileName(fileItem.getOriginalFilename());
+        job.addLog(processingLogs);
+        processingLogs.setStatus(Status.QUEUED);
         File javaFile = toJavaFile(fileItem);
 
-        CompletableFuture<ProcessingResult> future = resilientFileProcessingService.processFileResilient(javaFile, job);
+        CompletableFuture<ProcessingResult> future = resilientFileProcessingService.processFileResilient(javaFile, job, processingLogs);
         ProcessingResult result = future.get(30, TimeUnit.SECONDS);
 
-        // 3) read all bytes of the .docx
-        if (result.isSuccess()) {
-          System.out.println("the result is Success");
-          job.setStatus(Status.COMPLETED);
 
-          logger.info("the job is {}", job);
+        if (result.isSuccess()) {
+          processingLogs.setStatus(Status.COMPLETED);
+          processingLogs.setCompletedAt(LocalDateTime.now());
 
           String outputPath = javaFile.getAbsolutePath().replaceAll(".pdf$", ".docx");
           File wordFile = new File(outputPath);
           convertedFiles.add(wordFile);
         } else {
-          System.out.println("the result is Failed");
+
           return ResponseEntity.internalServerError().build();
         }
       }
+
+      job.setStatus(Status.COMPLETED);
+      job.setCompletedAt(LocalDateTime.now());
+
+      logger.info("the job is {}", job);
       if (convertedFiles.size() == 1) {
         File singleFile = convertedFiles.get(0);
         byte[] data = Files.readAllBytes(singleFile.toPath());

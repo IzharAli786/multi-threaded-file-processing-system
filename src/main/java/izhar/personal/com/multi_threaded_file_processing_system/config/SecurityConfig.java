@@ -16,8 +16,19 @@ import static org.springframework.security.config.Customizer.withDefaults;
 public class SecurityConfig {
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http.authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated()).httpBasic(withDefaults());
-    http.csrf(AbstractHttpConfigurer::disable).cors(withDefaults());
+    http
+          .authorizeHttpRequests(authorize -> authorize
+                // 1. Add this rule to permit all access to the SockJS info endpoint
+                .requestMatchers("/customers/info").permitAll()
+                // 2. Keep this rule to secure all other endpoints
+                .anyRequest().authenticated()
+          )
+          .httpBasic(withDefaults());
+
+    http
+          .csrf(AbstractHttpConfigurer::disable)
+          .cors(withDefaults());
+
     return http.build();
   }
 

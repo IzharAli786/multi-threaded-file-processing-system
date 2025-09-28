@@ -2,6 +2,7 @@ package izhar.personal.com.multi_threaded_file_processing_system.service;
 
 import izhar.personal.com.multi_threaded_file_processing_system.dto.ProcessingResult;
 import izhar.personal.com.multi_threaded_file_processing_system.entity.Job;
+import izhar.personal.com.multi_threaded_file_processing_system.entity.ProcessingLogs;
 import izhar.personal.com.multi_threaded_file_processing_system.enums.Status;
 import izhar.personal.com.multi_threaded_file_processing_system.exception.ConversionTimeoutException;
 import izhar.personal.com.multi_threaded_file_processing_system.exception.FileProcessingException;
@@ -60,10 +61,12 @@ public class ResilientFileProcessingService {
     return future;
   }
 
-  public CompletableFuture<ProcessingResult> processFileResilient(File inputFile, Job job) {
+  public CompletableFuture<ProcessingResult> processFileResilient(File inputFile, Job job, ProcessingLogs processingLogs) {
 
     job.setStatus(Status.PROCESSING);
+    processingLogs.setStatus(Status.PROCESSING);
     logger.info("the job is {}", job);
+    logger.info("the processingLog name  in the resilient file {}  ", processingLogs.getFileName());
     String threadName = Thread.currentThread().getName();
     LocalDateTime startTime = LocalDateTime.now();
     long initialTime = System.currentTimeMillis();

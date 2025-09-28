@@ -34,7 +34,10 @@ function App() {
             formdata.append("file", file);
 
             const response = await axios.post('/customer/upload/files', formdata, {
-                headers: {'Content-Type': 'multipart/form-data'},
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': 'Basic ' + btoa('izhar:izhar')
+                },
                 responseType: "blob"
             });
 

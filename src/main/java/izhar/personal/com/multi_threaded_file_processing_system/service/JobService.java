@@ -21,7 +21,6 @@ public class JobService {
     job.setStatus(status);
     jobRepository.save(job);
     return job;
-
   }
 
 }
