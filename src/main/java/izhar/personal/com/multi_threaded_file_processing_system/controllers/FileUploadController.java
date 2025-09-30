@@ -16,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.multipart.MultipartFile;
@@ -50,19 +51,22 @@ public class FileUploadController {
   @Autowired
   private ResilientFileProcessingService resilientFileProcessingService;
   private ProcessingLogService processingLogService;
+  @Autowired
+  private SimpMessagingTemplate simpMessagingTemplate;
+
+  @Autowired
+  private StompController stompController;
 
 
   @PostMapping("/upload/files")
   public ResponseEntity<ByteArrayResource> uploadFiles(@RequestParam("file") MultipartFile[] file) throws Error {
     try {
 
-
-      logService.addLog("strong", "i am in upload/files", "FileUploadController");
       Job job = jobService.createJob("myJob1", Status.QUEUED);
-
-      logger.info("the job is {}", job);
+      simpMessagingTemplate.convertAndSend("/topic/log", job.getId());
       List<File> convertedFiles = new ArrayList<>();
       for (MultipartFile fileItem : file) {
+
         if (fileItem.isEmpty()) {
           return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ByteArrayResource("".getBytes()));
 
@@ -71,10 +75,12 @@ public class FileUploadController {
         processingLogs.setFileName(fileItem.getOriginalFilename());
         job.addLog(processingLogs);
         processingLogs.setStatus(Status.QUEUED);
+        stompController.notifyJobStatusChange(job.getId(), String.valueOf(job.getStatus()));
         File javaFile = toJavaFile(fileItem);
 
         CompletableFuture<ProcessingResult> future = resilientFileProcessingService.processFileResilient(javaFile, job, processingLogs);
-        ProcessingResult result = future.get(30, TimeUnit.SECONDS);
+
+        ProcessingResult result = future.get(5, TimeUnit.MINUTES);
 
 
         if (result.isSuccess()) {
@@ -84,6 +90,7 @@ public class FileUploadController {
           String outputPath = javaFile.getAbsolutePath().replaceAll(".pdf$", ".docx");
           File wordFile = new File(outputPath);
           convertedFiles.add(wordFile);
+
         } else {
 
           return ResponseEntity.internalServerError().build();
@@ -91,6 +98,8 @@ public class FileUploadController {
       }
 
       job.setStatus(Status.COMPLETED);
+      stompController.notifyJobStatusChange(job.getId(), String.valueOf(job.getStatus()));
+
       job.setCompletedAt(LocalDateTime.now());
 
       logger.info("the job is {}", job);

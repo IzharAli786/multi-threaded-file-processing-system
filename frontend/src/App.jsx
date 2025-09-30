@@ -210,7 +210,7 @@ function App() {
                     )}
                 </div>
             </div>
-            {/*<WebSocket></WebSocket>*/}
+            <WebSocket></WebSocket>
         </>
 
     )

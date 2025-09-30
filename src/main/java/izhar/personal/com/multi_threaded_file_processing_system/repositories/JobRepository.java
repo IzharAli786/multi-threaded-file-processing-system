@@ -9,8 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface JobRepository extends CrudRepository<Job,Long> {
-    List<Job> findByStatus(Status status);
-
+public interface JobRepository extends CrudRepository<Job, Long> {
+  List<Job> findByStatus(Status status);
 
 }
