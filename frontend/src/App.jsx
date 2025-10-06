@@ -2,15 +2,13 @@ import {useState} from 'react'
 import './App.css'
 import axios from 'axios';
 import './index.css';
-
 import WebSocket from "./webSockets/WebSocket.jsx";
-
 
 function App() {
     const [file, setFile] = useState(null);
     const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
-    const [fileMessage, setFileMessage] = useState('');
+    const [fileMessage, setFileMessage] = useState([]);
     const [loading, setLoading] = useState(false);
 
     const handleFileClick = async (event) => {
@@ -28,12 +26,11 @@ function App() {
                 return;
             }
 
-            console.log('Starting file upload for:', file.name); // Debug log
-
-            const formdata = new FormData();
-            formdata.append("file", file);
-
-            const response = await axios.post('/customer/upload/files', formdata, {
+            const formData = new FormData();
+            file.forEach(file => {
+                formData.append("file", file);
+            })
+            const response = await axios.post('/customer/upload/files', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'Authorization': 'Basic ' + btoa('izhar:izhar')
@@ -45,18 +42,21 @@ function App() {
                 const blob = new Blob([response.data], {
                     type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 });
+
+
                 const url = window.URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = file.name.replace(".pdf", ".docx");
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                file.forEach(file => {
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = file.name.replace(".pdf", ".docx");
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                })
                 window.URL.revokeObjectURL(url);
                 setFile(null);
                 setSuccessMessage("File successfully converted to Word document");
             }
-
         } catch (error) {
             console.error('Error during conversion:', error); // Debug log
             if (error.response) {
@@ -72,19 +72,18 @@ function App() {
     }
 
     const handleFileUpload = (event) => {
-        const f = event.target.files?.[0];
-        console.log('File selected:', f); // Debug log
-        setFile(f || null);
+        const fileArray = Array.from(event.target.files);
+
+        setFile(fileArray || null);
         setErrorMessage(''); // Clear previous errors
         setSuccessMessage(''); // Clear previous success
-
-        if (f) {
-            setFileMessage(`Selected: ${f.name}`);
+        if (fileArray.length >= 1) {
+            const names = fileArray.map(file => file.name);
+            setFileMessage(names);
         } else {
-            setFileMessage('');
+            setFileMessage(null);
         }
     }
-
     return (
         <>
             <div
@@ -119,7 +118,7 @@ function App() {
                     <div
                         className="border-2 border-dashed border-gray-600 rounded-xl p-6 text-center transition-all duration-300 cursor-pointer hover:border-blue-400 hover:bg-blue-500/5 group mb-4 relative bg-gray-900/50">
                         <input
-                            type="file"
+                            type="file" multiple={true}
                             onChange={handleFileUpload}
                             accept="application/pdf"
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
@@ -202,17 +201,21 @@ function App() {
 
                     {/* File Message */}
                     {fileMessage && (
-                        <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl backdrop-blur-sm">
-                            <p className="text-blue-300 text-sm text-center">
-                                {fileMessage}
-                            </p>
-                        </div>
+
+                        fileMessage.map((file, i) => (
+                            <div
+                                className="mt-3 flex flex-column p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl backdrop-blur-sm">
+                                <p className="text-blue-300 text-sm text-center">
+                                    {file}
+                                </p>
+                            </div>
+                        ))
+
                     )}
                 </div>
             </div>
             <WebSocket></WebSocket>
         </>
-
     )
 }
 

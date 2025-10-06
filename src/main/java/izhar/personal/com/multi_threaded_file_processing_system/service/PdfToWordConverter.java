@@ -6,50 +6,52 @@ import com.itextpdf.text.pdf.parser.PdfTextExtractor;
 import com.itextpdf.text.pdf.parser.SimpleTextExtractionStrategy;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.springframework.context.annotation.Bean;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.io.*;
 import java.lang.AutoCloseable;
 
-public class PdfToWordConverter  {
-    public File convertToWord(File pdfFile) throws IOException {
-        String pdfPath = pdfFile.getAbsolutePath();
-        File docxFile = new File(pdfPath.replaceAll("\\.pdf$", ".docx"));
-        StringBuilder allText = new StringBuilder();
-        PdfReader reader = new PdfReader(pdfPath);
-        try  {
-            int pages = reader.getNumberOfPages();
-            for (int i = 1; i <= pages; i++) {
-                String text = PdfTextExtractor.getTextFromPage(
-                        reader, i, new SimpleTextExtractionStrategy()
-                );
-                allText.append(text).append(System.lineSeparator());
-            }
+public class PdfToWordConverter {
+  public File convertToWord(File pdfFile) {
+    String pdfPath = pdfFile.getAbsolutePath();
+    File docxFile = new File(pdfPath.replaceFirst("(?i)\\.pdf$", ".docx"));
 
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to read PDF", e);
-        }
-        finally {
+    PdfReader reader = null; // not AutoCloseable in iText 5
+    try (XWPFDocument document = new XWPFDocument();
+         OutputStream out = new BufferedOutputStream(new FileOutputStream(docxFile))) {
 
-            reader.close();
-        }
-        // 2) Write to a fresh .docx
-        try (XWPFDocument document = new XWPFDocument();
-             FileOutputStream out = new FileOutputStream(docxFile)) {
+      // Use the filename constructor (random access, better for big PDFs than InputStream)
+      reader = new PdfReader(pdfPath);
 
-            for (String line : allText.toString().split("\\r?\\n")) {
-                if (line.isBlank()) continue;
-                XWPFParagraph p = document.createParagraph();
-                p.createRun().setText(line);
-            }
-            document.write(out);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to write DOCX", e);
+      int pages = reader.getNumberOfPages();
+      for (int i = 1; i <= pages; i++) {
+        String pageText = PdfTextExtractor.getTextFromPage(reader, i, new SimpleTextExtractionStrategy());
+
+        // ONE paragraph per page + line breaks inside the same run (far fewer POI objects)
+        XWPFParagraph para = document.createParagraph();
+        XWPFRun run = para.createRun();
+
+        String[] lines = pageText.split("\\r?\\n", -1);
+        for (int li = 0; li < lines.length; li++) {
+          if (li > 0) run.addBreak();
+          if (!lines[li].isEmpty()) run.setText(lines[li]);
         }
-        return docxFile;
+        run.addBreak(); // spacer between pages
+      }
+
+      document.write(out);
+
+    } catch (IOException e) {
+      throw new UncheckedIOException("PDF->DOCX failed", e);
+    } finally {
+      if (reader != null) {
+        reader.close(); // important: releases the underlying random-access resource
+      }
     }
+
+    return docxFile;
+  }
+
 
 }

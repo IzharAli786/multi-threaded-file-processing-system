@@ -12,20 +12,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
+import java.io.*;
 import java.time.LocalDateTime;
-import java.util.zip.GZIPInputStream;
-import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,7 +56,7 @@ public class FileUploadController {
 
 
   @PostMapping("/upload/files")
-  public ResponseEntity<ByteArrayResource> uploadFiles(@RequestParam("file") MultipartFile[] file) throws Error {
+  public ResponseEntity<InputStreamResource> uploadFiles(@RequestParam("file") MultipartFile[] file, InputStream inputStream) throws Error {
     try {
 
       Job job = jobService.createJob("myJob1", Status.QUEUED);
@@ -68,7 +65,7 @@ public class FileUploadController {
       for (MultipartFile fileItem : file) {
 
         if (fileItem.isEmpty()) {
-          return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ByteArrayResource("".getBytes()));
+          return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
 
         }
         ProcessingLogs processingLogs = new ProcessingLogs(fileItem.getName());
@@ -104,21 +101,21 @@ public class FileUploadController {
 
       logger.info("the job is {}", job);
       if (convertedFiles.size() == 1) {
-        File singleFile = convertedFiles.get(0);
-        byte[] data = Files.readAllBytes(singleFile.toPath());
-        ByteArrayResource resource = new ByteArrayResource(data);
+        File singleFile = convertedFiles.getFirst();
+//        byte[] data = Files.readAllBytes(singleFile.toPath());||
+        FileInputStream fileInputStream = new FileInputStream(singleFile);
+        InputStreamResource resource = new InputStreamResource(fileInputStream);
         return ResponseEntity.ok()
               .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
               .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + singleFile.getName() + "\"")
-              .contentLength(data.length)
+              .contentLength(singleFile.length())
               .body(resource);
       } else {
-        byte[] zipData = createZipFile(convertedFiles);
-        ByteArrayResource resource = new ByteArrayResource(zipData);
+        InputStreamResource resource = createZipFile(convertedFiles);
+
         return ResponseEntity.ok()
               .contentType(MediaType.APPLICATION_OCTET_STREAM)
               .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"converted_documents.zip\"")
-              .contentLength(zipData.length)
               .body(resource);
       }
     } catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
@@ -127,21 +124,37 @@ public class FileUploadController {
     }
   }
 
-  private byte[] createZipFile(List<File> files) throws IOException {
-    try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
-         ZipOutputStream zos = new ZipOutputStream(baos)) {
+  private InputStreamResource createZipFile(List<File> files) throws IOException {
+    // Step 1: Create a place to store zip data IN MEMORY
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+    // Step 2: Create ZipOutputStream to WRITE TO memory
+    try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+
+      // Step 3: For each file, add it to zip
       for (File file : files) {
+        // Create zip entry
         ZipEntry entry = new ZipEntry(file.getName());
         zos.putNextEntry(entry);
-        byte[] fileBytes = Files.readAllBytes(file.toPath());
-        zos.write(fileBytes);
-        zos.closeEntry();
 
+        // Read the file and write to zip
+        try (FileInputStream fis = new FileInputStream(file)) {
+          byte[] buffer = new byte[1024];
+          int length;
+          while ((length = fis.read(buffer)) > 0) {
+            zos.write(buffer, 0, length);
+          }
+        }
+
+        zos.closeEntry();
       }
+
       zos.finish();
-      ;
-      return baos.toByteArray();
     }
+
+    // Step 4: Convert memory data to InputStream for response
+    byte[] zipBytes = baos.toByteArray();
+    return new InputStreamResource(new ByteArrayInputStream(zipBytes));
   }
 
   @GetMapping("/test-logging")
@@ -171,4 +184,6 @@ public class FileUploadController {
     return convFile;
   }
 }
+
+
 

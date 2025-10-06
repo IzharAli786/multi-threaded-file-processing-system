@@ -16,17 +16,14 @@ import org.springframework.stereotype.Service;
 public class StompService {
   private static final Logger logger = LoggerFactory.getLogger(StompService.class);
   private Job job;
-
   @Autowired
   private JobService jobService;
-
   @Autowired
   private JobRepository jobRepository;
 
   @MessageMapping("customers/job/{jobID}")
   @SendTo("/topic/jobStatus")
   public String JobStatus(@DestinationVariable("jobID") long jobID) {
-
     job = jobRepository.findById(jobID).orElse(null);
     if (job == null) throw new IllegalArgumentException("Job Not Found");
     logger.info("the job status is {}", job.getStatus().toString());
